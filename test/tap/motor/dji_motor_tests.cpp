@@ -48,8 +48,7 @@ TEST(DjiMotor, parseCanRxData_invalid_motor_id)
     tap::Drivers drivers;
     DjiMotor motor(&drivers, MOTOR1, tap::can::CanBus::CAN_BUS1, false, "cool motor");
 
-    modm::can::Message msg(MOTOR2, 8);
-    msg.setExtended(false);
+    modm::can::Message msg(MOTOR2, 8, {}, false);
 
     motor.processMessage(msg);
 
@@ -62,8 +61,7 @@ TEST(DjiMotor, parseCanRxData_valid_motor_id_motor_online)
     tap::Drivers drivers;
     DjiMotor motor(&drivers, MOTOR1, tap::can::CanBus::CAN_BUS1, false, "cool motor");
 
-    modm::can::Message msg(MOTOR1, 8);
-    msg.setExtended(false);
+    modm::can::Message msg(MOTOR1, 8, {}, false);
 
     motor.processMessage(msg);
 
@@ -99,8 +97,7 @@ TEST(DjiMotor, parseCanRxData_motor_info_interpreted_correctly)
     tap::Drivers drivers;
     DjiMotor motor(&drivers, MOTOR1, tap::can::CanBus::CAN_BUS1, false, "cool motor");
 
-    modm::can::Message msg(MOTOR1, 8);
-    msg.setExtended(false);
+    modm::can::Message msg(MOTOR1, 8, {}, false);
 
     MotorData motorData;
 
@@ -126,8 +123,7 @@ TEST(DjiMotor, parseCanRxData_motor_info_interpreted_correctly_motor_inverted)
     tap::Drivers drivers;
     DjiMotor motor(&drivers, MOTOR1, tap::can::CanBus::CAN_BUS1, true, "cool motor");
 
-    modm::can::Message msg(MOTOR1, 8);
-    msg.setExtended(false);
+    modm::can::Message msg(MOTOR1, 8, {}, false);
 
     MotorData motorData;
 
@@ -176,8 +172,7 @@ TEST(DjiMotor, serializeCanSendData_serializes_desired_output_in_correct_positio
 
     motor.setDesiredOutput(1'000);
 
-    modm::can::Message msg(MOTOR1, 8);
-    msg.setExtended(false);
+    modm::can::Message msg(MOTOR1, 8, 0xffff'ffff'ffff'ffff, false);
 
     motor.serializeCanSendData(&msg);
 
@@ -192,7 +187,7 @@ TEST(DjiMotor, resetEncoderValue_zeroes_encoder_fields)
     tap::Drivers drivers;
     DjiMotor motor(&drivers, MOTOR1, tap::can::CanBus::CAN_BUS1, false, "cool motor");
 
-    modm::can::Message msg(MOTOR1, 8);
+    modm::can::Message msg(MOTOR1, 8, {}, false);
 
     MotorData motorData;
 
@@ -224,8 +219,7 @@ TEST(DjiMotor, moving_relative_to_home_after_zeroed_ok)
 
     static constexpr uint16_t ENC_RESOLUTION = 8192;
 
-    modm::can::Message msg(MOTOR1, 8);
-    msg.setExtended(false);
+    modm::can::Message msg(MOTOR1, 8, {}, false);
 
     MotorData motorData;
 
@@ -269,8 +263,7 @@ TEST(DjiMotor, inverted_moving_relative_to_home_after_zeroed_ok)
 
     static constexpr uint16_t ENC_RESOLUTION = 8192;
 
-    modm::can::Message msg(MOTOR1, 8);
-    msg.setExtended(false);
+    modm::can::Message msg(MOTOR1, 8, {}, false);
 
     MotorData motorData;
 
