@@ -142,6 +142,9 @@ TEST(DoubleDjiMotor, getTorque__returns_average_torque)
 {
     SETUP_TEST();
 
+    ON_CALL(motor.motorOne, isMotorOnline).WillByDefault(Return(true));
+    ON_CALL(motor.motorTwo, isMotorOnline).WillByDefault(Return(true));
+
     int16_t motorOneTorque = 0, motorTwoTorque = 0;
 
     ON_CALL(motor.motorOne, getTorque).WillByDefault(ReturnPointee(&motorOneTorque));
@@ -160,4 +163,16 @@ TEST(DoubleDjiMotor, getTorque__returns_average_torque)
     motorOneTorque = 2000;
     motorTwoTorque = 2000;
     EXPECT_EQ(2000, motor.getTorque());
+
+    // Test if same functionality works with motors offline
+    motorOneTorque = -1000;
+    motorTwoTorque = 0;
+    ON_CALL(motor.motorTwo, isMotorOnline).WillByDefault(Return(false));
+    EXPECT_EQ(-1000, motor.getTorque());
+
+    ON_CALL(motor.motorOne, isMotorOnline).WillByDefault(Return(false));
+    ON_CALL(motor.motorTwo, isMotorOnline).WillByDefault(Return(true));
+    motorOneTorque = 0;
+    motorTwoTorque = 1000;
+    EXPECT_EQ(1000, motor.getTorque());
 }
