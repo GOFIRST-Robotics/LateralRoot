@@ -1,5 +1,8 @@
 # Taproot Changelog
 
+## May 1 2025
+ - Butterworth filter generation now supports lowpass, highpass, bandpass, and bandstop.
+
 ## April 2025
 - `Transform` now stores translational velocity and acceleration, as well as angular velocity.
   - `compose()`ing such "Dynamic Transforms" correctly updates all derivatives.
@@ -17,6 +20,12 @@
 - Brought `bmi088.read()` in line with the `mpu6500.read()` method, which now waits to read till the sampling frequency is reached. 
 
 ## March 2025
+- Added Butterworth filter coefficient generation.
+    -When constructing a butterworth filter of n order pass in the sample time difference and cutoff frequency in radians/s to obtain a list of coefficients for use in the discrete filter.
+- Added discrete filter object
+    -Takes in a list of natural and forced response coefficients; will compute the next filtered value when .filterData() is called.
+    `.reset()` clears the natural and forced response but keeps the coefficients.
+    `.getLastFilteredValue()` gets the last filtered value.
 - Added Encoders
     - Added `EncoderInterface`, which is a interface for all possible encoders.
         - `getPosition()` returns a `WrappedFloat` for the position in radians.

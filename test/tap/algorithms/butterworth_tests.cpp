@@ -57,13 +57,24 @@ TEST(PolynomialExpansion, real_roots_order_2)
     EXPECT_NEAR(1.0, coeffs[2], 1e-6);
 }
 
-TEST(CalculateScalar, unity_gain)
+TEST(EvaluateFrequencyResponse, unity_gain)
 {
-    constexpr uint8_t ORDER = 2;
-    std::array<double, ORDER + 1> numerator = {1.0, 2.0, 1.0};    // sum to 4.0
-    std::array<double, ORDER + 1> denominator = {0.5, 1.0, 0.5};  // sum to 2.0
-    double scalar = calculateScalar<ORDER>(numerator, denominator);
-    double expected = 0.5;
+    constexpr int ORDER = 2;
+    constexpr double Ts = 1 / 500.0;
+    /*
+     * Coefficients for a lowpass filter with a wc of 1 and a Ts of 1/500.
+     * Note: it's in backwards order as everything within Butterworth is calculated in reverse from
+     * delivered. Also, it's actually necessary to have this amount of digits; 6 digits of precision
+     * is not enough.
+     */
+    std::array<double, ORDER + 1> numerator = {
+        9.985875464857408e-07,
+        1.997175092971482e-06,
+        9.985875464857408e-07};
+    std::array<double, ORDER + 1> denominator = {9.971755689727204e-01, -1.997171574622534, 1};
+    std::complex<double> resp = evaluateFrequencyResponse<ORDER>(numerator, denominator, 0, Ts);
+    double scalar = complex_abs(resp);
+    double expected = 1;
     EXPECT_NEAR(expected, scalar, 1e-6);
 }
 
@@ -124,39 +135,86 @@ struct AttenuationParams
     float max, min = 0;
 };
 
+template <FilterType Type>
 class AttenuationTest : public testing::Test, public testing::WithParamInterface<AttenuationParams>
 {
 protected:
     static constexpr uint8_t ORDER = 2;
     static constexpr double wc = 10.0;
+    static constexpr double wh = 100.0;
     static constexpr double Ts = 1 / 500.0;
-    static constexpr Butterworth<ORDER> filter{wc, Ts};
+    static constexpr Butterworth<ORDER, Type, double> filter{wc, Ts, wh};
 };
 
-TEST_P(AttenuationTest, filter_attenuates_properly)
-{
-    auto nat = filter.getNaturalResponseCoefficients();
-    auto force = filter.getForcedResponseCoefficients();
+// clang-format off
+#define ATTENUATION_TEST(Type) \
+    using Type##AttenuationTest = AttenuationTest<Type>; \
+    TEST_P(Type##AttenuationTest, filter_attenuates_properly) \
+    { \
+        auto nat = filter.getNaturalResponseCoefficients(); \
+        auto force = filter.getForcedResponseCoefficients(); \
+        DiscreteFilter<Butterworth<ORDER, Type, double>::COEFFICIENTS, double> discreteFilter(nat, force); \
+        float max_val = 0.0f; \
+        constexpr int simulation_points = 50000; \
+        for (int i = 0; i < simulation_points; i++) \
+        { \
+            float val = discreteFilter.filterData(sin( \
+                GetParam().frequency * (i * Ts)));  /* Feed in a sin wave with frequency and amp of 1 */ \
+            if (i > simulation_points - ((2*M_PI)/GetParam().frequency/Ts + 100)) \
+            { \
+                max_val = std::max(max_val, std::abs(val)); \
+            } \
+        } \
+        EXPECT_LT(max_val, GetParam().max);  /* Check that the output is attenuated */ \
+        EXPECT_GT(max_val, GetParam().min);  /* Check that the output is not too attenuated */ \
+    } \
+    TEST_P(Type##AttenuationTest, runtime_matches_constexpr) \
+    { \
+        Butterworth<ORDER, Type, double> runtime{wc, Ts, wh}; \
+        auto nat = runtime.getNaturalResponseCoefficients(); \
+        auto force = runtime.getForcedResponseCoefficients(); \
+        auto nat_constexpr = filter.getNaturalResponseCoefficients(); \
+        auto force_constexpr = filter.getForcedResponseCoefficients(); \
+        for (size_t i = 0; i < Butterworth<ORDER, Type, double>::COEFFICIENTS; ++i) \
+        { \
+            EXPECT_NEAR(nat[i], nat_constexpr[i], 1e-6); \
+            EXPECT_NEAR(force[i], force_constexpr[i], 1e-6); \
+        } \
+    } \
+// clang-format on
 
-    DiscreteFilter<ORDER + 1> discreteFilter(nat, force);
-
-    float max_val = 0.0f;
-    for (int i = 0; i < 10000; i++)
-    {
-        float val = discreteFilter.filterData(sin(
-            GetParam().frequency * (i * Ts)));  // Feed in a sin wave with frequency and amp of 1
-        if (i > 5000)
-        {
-            max_val = std::max(max_val, std::abs(val));
-        }
-    }
-    EXPECT_LT(max_val, GetParam().max);  // Check that the output is attenuated
-    EXPECT_GT(max_val, GetParam().min);  // Check that the output is not too attenuated
-}
-
+ATTENUATION_TEST(LOWPASS)
 INSTANTIATE_TEST_SUITE_P(
     ButterworthFilter,
-    AttenuationTest,
+    LOWPASSAttenuationTest,
     testing::Values(
         AttenuationParams{.frequency = 1.0, .max = 1.0 + 1e-3, .min = 1.0 - 1e-3},
         AttenuationParams{.frequency = 100.0, .max = 1e-2}));
+
+ATTENUATION_TEST(HIGHPASS)
+INSTANTIATE_TEST_SUITE_P(
+    ButterworthFilter,
+    HIGHPASSAttenuationTest,
+    testing::Values(
+        AttenuationParams{.frequency = 1.0, .max = 1e-2},
+        AttenuationParams{.frequency = 100.0, .max = 1.0 + 1e-3, .min = 1.0 - 1e-3}));
+
+ATTENUATION_TEST(BANDPASS)
+INSTANTIATE_TEST_SUITE_P(
+    ButterworthFilter,
+    BANDPASSAttenuationTest,
+    testing::Values(
+        AttenuationParams{.frequency = 1.0, .max = 1e-2},
+        AttenuationParams{.frequency = 30.0, .max = 1.0 + 1e-2, .min = 1.0 - 1e-2},
+        AttenuationParams{.frequency = 50.0, .max = 1.0 + 1e-2, .min = 1.0 - 1e-2},
+        AttenuationParams{.frequency = 1000.0, .max = 1e-2}));
+
+ATTENUATION_TEST(BANDSTOP)
+INSTANTIATE_TEST_SUITE_P(
+    ButterworthFilter,
+    BANDSTOPAttenuationTest,
+    testing::Values(
+        AttenuationParams{.frequency = 1, .max = 1.0 + 1e-2, .min = 1.0 - 1e-2},
+        AttenuationParams{.frequency = 30.0, .max = 1e-2},
+        AttenuationParams{.frequency = 40.0, .max = 1e-1},
+        AttenuationParams{.frequency = 1000.0, .max = 1.0 + 1e-2, .min = 1.0 - 1e-2}));
