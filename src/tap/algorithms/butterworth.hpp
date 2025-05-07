@@ -23,15 +23,12 @@
 #include <cmath>
 #include <complex>
 #include <cstdint>
-#include <iomanip>
-#include <iostream>
 
 #include "modm/math/geometry/angle.hpp"
 
 /**
- * @file butterworth.hpp
- * @brief Implementation of Butterworth filter design and analysis in both analog and digital
- * domains.
+ * @class Butterworth
+ * @brief Implementation of Butterworth filter design in the discrete domain.
  *
  * This header file provides a comprehensive implementation of Butterworth filters,
  * including low-pass, high-pass, band-pass, and band-stop filters. The Butterworth
@@ -47,53 +44,57 @@
  *   and type.
  *
  * The design process includes pre-warping of frequencies for the bilinear transform,
- * generation of prototype poles, and scaling of coefficients
+ * generation of prototype poles, and scaling of coefficients.
  *
- * @details
  * The following transforms map a lowpass prototype into other filter types (s-domain):
  *
  * - **Lowpass to Lowpass**:
- *   \f[ s \rightarrow \frac{s}{\Omega_c} \f]
+ *   \f$ s \rightarrow \frac{s}{\Omega_c} \f$
  *
  * - **Lowpass to Highpass**:
- *   \f[ s \rightarrow \frac{\Omega_c}{s} \f]
+ *   \f$ s \rightarrow \frac{\Omega_c}{s} \f$
  *
  * - **Lowpass to Bandpass**:
- *   \f[ s \rightarrow \frac{s^2 + \Omega_0^2}{B s} \f]
+ *   \f$ s \rightarrow \frac{s^2 + \Omega_0^2}{B s} \f$
  *
  * - **Lowpass to Bandstop**:
- *   \f[ s \rightarrow \frac{B s}{s^2 + \Omega_0^2} \f]
+ *   \f$ s \rightarrow \frac{B s}{s^2 + \Omega_0^2} \f$
  *
- *  \f$ \Omega_0 = \sqrt{\Omega_l \cdot \Omega_h} \f$, \f$ B = \Omega_h - \Omega_l \f$
+ * Where:
+ * \f$ \Omega_0 = \sqrt{\Omega_l \cdot \Omega_h}, \quad B = \Omega_h - \Omega_l \f$
  *
- *  After analog transformation, apply the bilinear transform:
+ * After analog transformation, apply the bilinear transform:
+ * \f[ s = \frac{2}{T} \cdot \frac{z - 1}{z + 1} \f]
  *
- *  \f[ s = \frac{2}{T} \cdot \frac{z - 1}{z + 1} \f]
+ * @note
+ *    This implementation is designed for C++20 ``constexpr``, enabling
+ *    compile-time computation of filter configurations.
  *
- * @note This implementation is constexpr, enabling compile-time
- *       computation for filter configurations.
+ * @warning
+ *    High-order filters can introduce high phase delays and should be used with caution.
+ *    For most applications, low-pass and high-pass filters of order 2 or lower are sufficient.
  *
- * @warning High-order filters can introduce numerical instability and should be
- *          used with caution. For most applications, low-pass and high-pass filters
- *          of order 2 or lower are sufficient.
+ *    If results are suspicious, verify filter coefficients using external tools
+ *    such as MATLAB or Python (e.g., SciPy).
  *
- * @author Aiden Prevey
- * @date 4/29/2025
- * @version 1.1
  *
  * @section Usage
  *
  * To use this implementation, include this header file and instantiate the
- * `Butterworth` class with the desired filter order, type, and parameters
- * and then pass those coefficients into a DiscreteFilter.
- * Example:
+ * ``Butterworth`` class with the desired filter order, type, and parameters.
+ * Then, pass those coefficients into a ``DiscreteFilter``.
  *
  * @code
- * static constexpr Butterworth<1, LOWPASS> filter(wc, Ts);
- * auto naturalCoeffs = filter.getNaturalResponseCoefficients();
- * auto forcedCoeffs = filter.getForcedResponseCoefficients();
- * DiscreteFilter<2> Filter(naturalCoeffs, forcedCoeffs);
+ *    static constexpr Butterworth<1, LOWPASS> filter(wc, Ts);
+ *    auto naturalCoeffs = filter.getNaturalResponseCoefficients();
+ *    auto forcedCoeffs = filter.getForcedResponseCoefficients();
+ *    DiscreteFilter<2> Filter(naturalCoeffs, forcedCoeffs);
+ *
  * @endcode
+ *
+ * @author Aiden Prevey
+ * @date 4/29/2025
+ * @version 2.0
  */
 
 namespace tap
