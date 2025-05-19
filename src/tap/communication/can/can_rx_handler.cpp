@@ -119,12 +119,13 @@ void CanRxHandler::processReceivedCanData(
 
     if (!isValidCanId(id))
     {
-        listener = listener->next;
+        RAISE_ERROR(drivers, "Invalid can id received");
+        return;
     }
 
-    if (listener != nullptr)
+    if (messageHandlerStore[id] != nullptr)
     {
-        listener->processMessage(rxMessage);
+        messageHandlerStore[id]->processMessage(rxMessage);
     }
 }
 
