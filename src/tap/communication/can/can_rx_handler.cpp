@@ -135,12 +135,13 @@ void CanRxHandler::processReceivedCanData(
     CanRxListener* listener = messageHandlerStore[bin];
     while (listener != nullptr && listener->canIdentifier != rxMessage.identifier)
     {
-        listener = listener->next;
+        RAISE_ERROR(drivers, "Invalid can id received");
+        return;
     }
 
-    if (listener != nullptr)
+    if (messageHandlerStore[id] != nullptr)
     {
-        listener->processMessage(rxMessage);
+        messageHandlerStore[id]->processMessage(rxMessage);
     }
 }
 
