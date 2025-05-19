@@ -30,8 +30,6 @@
 #include "tap/architecture/timeout.hpp"
 #include "tap/communication/can/can_rx_listener.hpp"
 
-#include "motor_interface.hpp"
-
 namespace tap::motor
 {
 /**

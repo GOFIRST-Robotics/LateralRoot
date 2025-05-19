@@ -168,7 +168,7 @@ DRIVERS_AND_MODULE_DEPENDENCIES = [
     {
         "object-name": "motor::RevMotorTxHandler",
         "mock-object-name": "",
-        "src-file": "tap/motor/rev_motor_tx_handler.hpp",
+        "src-file": "tap/motor/sparkmax/rev_motor_tx_handler.hpp",
         "mock-header": "",
         "constructor": "this",
         "module-dependencies": "",
