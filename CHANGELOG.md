@@ -1,5 +1,90 @@
 # Taproot Changelog
 
+## May 2025
+
+- Added `Odometry2DInterface::overrideOdometryPosition`.
+- Butterworth filter generation now supports lowpass, highpass, bandpass, and bandstop.
+
+## April 2025
+
+- `Transform` now stores translational velocity and acceleration, as well as angular velocity.
+  - `compose()`ing such "Dynamic Transforms" correctly updates all derivatives.
+  - `staticCompose()` can be used to ignore derivatives if they're not needed to reduce computation.
+  - `projectForward()` projects the transform forward in time.
+- Added `DynamicPosition` and `DynamicOrientation` classes, which also store their derivatives.
+- `ImuInterface` no longer contains `getTemp` in order to support more inertial measurement sources
+- **Breaking:** All IMU related values are now in radians. (`get[Roll/Pitch/Yaw]()` in rad, `getG[x/y/z]()` in rad/s)
+- Added Butterworth filter coefficient generation.
+    -When constructing a butterworth filter of n order pass in the sample time difference and cutoff frequency in radians/s to obtain a list of coefficients for use in the discrete filter.
+- Added discrete filter object
+    -Takes in a list of natural and forced response coefficients; will compute the next filtered value when .filterData() is called.
+    `.reset()` clears the natural and forced response but keeps the coefficients.
+    `.getLastFilteredValue()` gets the last filtered value.
+- Updated to Ref Serial v1.7.0.
+  - Removed all references to Standard 5.
+  - Removed chassis `power`, `voltage`, and `current` fields.
+  - Additional RMUC changes.
+- Added `VoltageSensorInterface`.
+- `PowerLimiter` also takes in a `VoltageSensorInterface*`.
+- Brought `bmi088.read()` in line with the `mpu6500.read()` method, which now waits to read till the sampling frequency is reached. 
+- IMUs extending `AbstractImu` can now have a mounting transform applied.
+- Added ARUW's Can Encoder.
+
+## March 2025
+
+- Removed limitation of `0x1E4` to `0x224` on CAN IDs. 
+- Added Encoders
+    - Added `EncoderInterface`, which is a interface for all possible encoders.
+        - `getPosition()` returns a `WrappedFloat` for the position in radians.
+        - `getVelocity()` returns a `float` in radians/second.
+        - `isOnline()` returns `true` is the encoder is online.
+        - `resetEncoderValue()` zeros the encoder to its current location.
+        - `alignWith(EncoderInterface*)` aligns the position of `this` encoder to another encoder.
+    - Added `WrappedEncoder`, which is an base class for all encoders that have a certain number of ticks per revolution.
+        - The constructor takes a gear ratio, which is output rotations over input rotations.
+        - Calculates the velocity as the instananeous difference between two positions and the timestep.
+        - `getEncoder()` returns the raw encoder value as a `WrappedFloat`.
+        - Can be inverted, similar to motors.
+    - Added `MultiEncoder`, which allows the combination of multiple encoders into a single encoder.
+        - Has a primary encoder (first in the array), that is used to align other encoders.
+        - Averages out the position and velocity of all online encoders.
+    - Added `MotorInterface::getEncoder()`
+        - Replaces the use for the encoder related methods in the interface, which have been deprecated.
+        - Removed the `getEncoderWrapped` and `getEncoderUnwrapped` methods as those no longer make sense.
+    - Added `DjiMotorEncoder`
+        - Refactored version of the encoder that was in `DjiMotor`
+        - `getShaftRpm()` returns the shaft rpm reported by the encoder.
+        - Moved the gear ratios from `DjiMotor` to this class.
+    - Modified `DjiMotor` and `DoubleDjiMotor` constructors.
+        - No longer able to specify the starting position and rotation count.
+        - Added parameters:
+            - `gearRatio`, defaults to 1.
+            - `encoderHomePosition[One]`, defaults to 0.
+            - `externalEncoder`, defaults to `nullptr`.
+- Removed a lot of `drivers.hpp` and `dji_motor.hpp` includes where not needed.
+    - Moved `MotorId` into `dji_motor_ids.hpp`
+- Testing
+    - Made it possible to specify the raw encoder position and shaft rpm to `DjiMotorEncoderMock` to minimize test changes.
+    - Can now specify `test="..."` to run specific tests that match GTest's regex. Only available in test-project, but code is copyable.
+- Added proper build caching to speed up pipelines, taproot only.
+- Made IMU getters `const`.
+
+## February 2025
+
+- Added `AbstractIMU`.
+  - Combines the shared logic between the `Bmi088` and `Mpu6500` IMUs.
+  - Has an internal mahony for computing pitch/roll/yaw.
+  - Designed for interactions with IMU devices, while `ImuInterface` is now for generic IMU data. 
+- Implemented SH1107 functionality with the ability to rotate the screen 90 degrees.
+
+## January 2025
+
+- Added support for current control on GM6020 motors.
+
+## November 2024
+
+- Updated `GovernorWithFallbackCommand` such that if the governed command is selected, the command stops if any governor is finished. Also stops the fallback command if all governors become ready.
+
 ## October 2024
 
 - Added `SequentialCommand`
@@ -22,8 +107,7 @@
         - `x` is shown for failed/incomplete tests, `+` is shown for passed tests.
 - Updated the `mpu6500` and `bmi088` to allow for variable temperature setpoints. This was done as in testing,
   the type C board was found to operate at a lower tempreature than the type A.
-- Updated `MahonyAHRS` for IMUs to no longer include the 180 degree offset. IMUs will now intitialize at 0 degrees
-- Updated `GovernorWithFallbackCommand` such that if the governed command is selected, the command stops if any governor is finished. Also stops the fallback command if all governors become ready.
+- Updated `MahonyAHRS` for IMUs to no longer include the 180 degree offset. IMUs will now intitialize at 0 degrees.
 
 ### Breaking Changes
 - Removed `Subsystem::isHardwareTestComplete`, `Subsystem::setHardwareTestsIncomplete`, `Subsystem::setHardwareTestsComplete`, `Subsystem::runHardwareTests`, `Subsystem::onHardwareTestStart`, `Subsystem::onHardwareTestComplete`
@@ -37,8 +121,7 @@
   - Fixed a bug with how `revolutions` was calculated
 
 ### Breaking Changes
-- Bmi088 now has seperate `periodicIMUUpdate` and `read` methods. `periodicIMUUpdate` should 
-be called at a fixed rate of mahony, and `read` should be called at a rate such that `periodicIMUUpdate` <= `read` <= sampling rate.
+- Bmi088 now has seperate `periodicIMUUpdate` and `read` methods. `periodicIMUUpdate` should be called at a fixed rate of mahony, and `read` should be called at a rate such that `periodicIMUUpdate` <= `read` <= sampling rate.
 - The `Angle` class within `WrappedFloat` now has bounds of 0 to 2pi as opposed to -pi to pi. This affects values gotten from `getWrappedValue()`.
 
 ## July 2024
@@ -68,9 +151,9 @@ be called at a fixed rate of mahony, and `read` should be called at a rate such 
 ## April 2024
 
 - Updated Ref Serial to support version 1.6.1. This has major breaking changes, but these are nessecary for working robots. See [this document](./extended-changelogs/ref-serial-1.6.1-changes.md) for more information.
-
-- Added in I2C support for development board type A
-- Make subsystem getName() const.
+- Added gear ratios and max outputs for more motors to `DjiMotor` as constants.
+- Added in I2C support for development board type A.
+- Make `Subsystem::getName()` const.
 - Replaced `ContiguousFloat` with `WrappedFloat`
   - "`[x]=`" operators are now overloaded for arithmetic between WrappedFloats with identical bounds (Replaces `WrappedFloat.shiftUp/Down`)
   - `WrappedFloat.difference` is now `WrappedFloat.minDifference` and returns a float
