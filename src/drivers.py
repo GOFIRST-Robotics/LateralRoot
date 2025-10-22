@@ -166,6 +166,14 @@ DRIVERS_AND_MODULE_DEPENDENCIES = [
         "module-dependencies": "",
     },
     {
+        "object-name": "motor::RevMotorTxHandler",
+        "mock-object-name": "",
+        "src-file": "tap/motor/sparkmax/rev_motor_tx_handler.hpp",
+        "mock-header": "",
+        "constructor": "this",
+        "module-dependencies": "",
+    },
+    {
         "object-name": "communication::sensors::imu::bmi088::Bmi088",
         "mock-object-name": nice_mock("mock::Bmi088Mock"),
         "src-file": "tap/communication/sensors/imu/bmi088/bmi088.hpp",
