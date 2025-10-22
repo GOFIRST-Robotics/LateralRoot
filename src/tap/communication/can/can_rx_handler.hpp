@@ -92,6 +92,24 @@ public:
     DISALLOW_COPY_AND_ASSIGN(CanRxHandler)
 
     /**
+     * @return true if canId lies in either the DJI or REV CAN ID ranges.
+     */
+    static inline bool isValidCanId(uint16_t canId)
+    {
+        return isDjiCanId(canId) || isRevCanId(canId);
+    }
+
+    static bool isDjiCanId(uint16_t canId)
+    {
+        return (canId >= 0X201 && canId <=  0x208);
+    }
+    static bool isRevCanId(uint16_t canId)
+    {
+        return (canId >= 0x001 && canId <=  0x008);
+    }
+
+
+    /**
      * Given a CAN identifier, returns the bin index between [0, NUM_CAN_IDS) for the identifier.
      */
     static inline uint16_t binIndexForCanId(uint16_t canId) { return canId % CAN_BINS; }
