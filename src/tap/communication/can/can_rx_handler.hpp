@@ -93,24 +93,25 @@ public:
     DISALLOW_COPY_AND_ASSIGN(CanRxHandler)
 
     /**
-     * Given a CAN identifier, returns the "normalized" id between [0, NUM_DJI_CAN_IDS), or a
-     * value >= NUM_DJI_CAN_IDS if the canId is outside the range specified.
+     * @return true if canId lies in either the DJI or REV CAN ID ranges.
      */
-    static inline uint16_t lookupTableIndexForCanId(uint16_t canId)
+    static inline bool isValidCanId(uint16_t canId)
     {
-        if (canId >= MIN_DJI_CAN_ID && canId <= MAX_DJI_CAN_ID)
-        {
-            return canId - MIN_DJI_CAN_ID;
-        } else if (canId >= MIN_REV_CAN_ID && canId > MAX_REV_CAN_ID)
-        {
-            return canId - MIN_REV_CAN_ID;
-        } else {
-            return 0;
-        }
+        return isDjiCanId(canId) || isRevCanId(canId);
     }
 
+    static bool isDjiCanId(uint16_t canId)
+    {
+        return (canId >= 0X201 && canId <=  0x208);
+    }
+    static bool isRevCanId(uint16_t canId)
+    {
+        return (canId >= 0x001 && canId <=  0x008);
+    }
+
+
     /**
-     * @return true if canId lies in either the DJI or REV CAN ID ranges.
+     * Given a CAN identifier, returns the bin index between [0, NUM_CAN_IDS) for the identifier.
      */
     static inline bool isValidCanId(uint16_t canId)
     {
@@ -173,15 +174,15 @@ protected:
      * Stores pointers to the `CanRxListeners` for CAN 1, referenced when
      * a new message is received.
      */
-    CanRxListener* messageHandlerStoreDjiCan1[NUM_DJI_CAN_IDS];
-    CanRxListener* messageHandlerStoreRevCan1[NUM_REV_CAN_IDS];
+    CanRxListener* messageHandlerStoreDjiCan1[CAN_BINS];
+    CanRxListener* messageHandlerStoreRevCan1[CAN_BINS];
 
     /**
      * Stores pointers to the `CanRxListeners` for CAN 2, referenced when
      * a new message is received.
      */
-    CanRxListener* messageHandlerStoreDjiCan2[NUM_DJI_CAN_IDS];
-    CanRxListener* messageHandlerStoreRevCan2[NUM_REV_CAN_IDS];
+    CanRxListener* messageHandlerStoreDjiCan2[CAN_BINS];
+    CanRxListener* messageHandlerStoreRevCan2[CAN_BINS];
 
 #if defined(PLATFORM_HOSTED) && defined(ENV_UNIT_TESTS)
 public:
