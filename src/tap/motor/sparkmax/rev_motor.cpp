@@ -45,7 +45,7 @@ RevMotor::RevMotor(
     bool isInverted,
     const char* name,
     float gearRatio,
-    uint32_t encoderHomePosition,
+    [[maybe_unused]] uint32_t encoderHomePosition,
     tap::encoder::EncoderInterface* externalEncoder)
     : CanRxListener(drivers, static_cast<uint32_t>(desMotorIdentifier), motorCanBus),
       motorName(name),
@@ -139,25 +139,20 @@ bool RevMotor::isMotorOnline() const
 // Add these implementations to rev_motor.cpp
 RevMotor::APICommand RevMotor::controlModeToAPI(ControlMode mode)
 {
-    if (mode == ControlMode::DUTY_CYCLE)
+    switch (mode)
     {
-        return APICommand::DutyCycle;
-    }
-    else if (mode == ControlMode::VELOCITY)
-    {
-        return APICommand::Velocity;
-    }
-    else if (mode == ControlMode::POSITION)
-    {
-        return APICommand::Position;
-    }
-    else if (mode == ControlMode::VOLTAGE)
-    {
-        return APICommand::Voltage;
-    }
-    else if (mode == ControlMode::CURRENT)
-    {
-        return APICommand::Current;
+        case ControlMode::DUTY_CYCLE:
+            return APICommand::DutyCycle;
+        case ControlMode::VELOCITY:
+            return APICommand::Velocity;
+        case ControlMode::POSITION:
+            return APICommand::Position;
+        case ControlMode::VOLTAGE:
+            return APICommand::Voltage;
+        case ControlMode::CURRENT:
+            return APICommand::Current;
+        default:
+            return APICommand::DutyCycle;
     }
 }
 
@@ -319,7 +314,6 @@ uint32_t RevMotor::CreateArbitrationParameterId(Parameter param, const RevMotor*
 {
     const uint32_t api = 0x300 | (static_cast<uint32_t>(param));  // OR param into API
     uint8_t deviceId = motor->getMotorIdentifier();
-    const auto x = 48 << 4;
     return (static_cast<uint32_t>(0x02) << 24) | (static_cast<uint32_t>(0x05) << 16) |
            (static_cast<uint32_t>(api) << 6) | static_cast<uint32_t>(deviceId);
 }
